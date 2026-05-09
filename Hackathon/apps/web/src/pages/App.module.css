@@ -44,6 +44,46 @@
   filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.25));
 }
 
+/* Media queries for responsiveness */
+@media (min-width: 640px) {
+  .appWrapper {
+    padding: 4rem 2rem;
+  }
+
+  .container {
+    max-width: 36rem; /* 576px */
+  }
+
+  .title {
+    font-size: 3rem;
+    margin-bottom: 3rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .appWrapper {
+    padding: 5rem 3rem;
+  }
+
+  .container {
+    max-width: 48rem; /* 768px */
+  }
+
+  .title {
+    font-size: 3.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 56rem; /* 896px */
+  }
+
+  .title {
+    font-size: 4rem;
+  }
+}
+
 /* Translucent warning/resting banner */
 .placeholderCard {
   background: rgba(30, 41, 59, 0.3);

@@ -444,3 +444,41 @@
   animation: spin 0.8s linear infinite;
   margin-bottom: 0.75rem;
 }
+
+/* Media queries for responsiveness */
+@media (min-width: 640px) {
+  .chatContainer {
+    min-height: 600px;
+  }
+
+  .header {
+    padding: 1.5rem;
+  }
+
+  .roomTitle {
+    font-size: 1.2rem;
+  }
+
+  .feed {
+    padding: 1.5rem;
+    max-height: 300px;
+  }
+
+  .inputTray {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .chatContainer {
+    min-height: 650px;
+  }
+
+  .header {
+    padding: 1.75rem;
+  }
+
+  .feed {
+    max-height: 350px;
+  }
+}

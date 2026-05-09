@@ -152,3 +152,34 @@
 .submitButton:active {
   transform: translateY(0.5px);
 }
+
+/* Media queries for responsiveness */
+@media (min-width: 640px) {
+  .formContainer {
+    padding: 2.5rem;
+  }
+
+  .title {
+    font-size: 1.4rem;
+  }
+
+  .inputField {
+    font-size: 0.9rem;
+    padding: 0.8rem 1.1rem;
+  }
+
+  .submitButton {
+    font-size: 0.9rem;
+    padding: 0.8rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .formContainer {
+    padding: 3rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}

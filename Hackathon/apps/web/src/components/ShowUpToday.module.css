@@ -151,3 +151,41 @@
     border-color: rgba(16, 185, 129, 0.35);
   }
 }
+
+/* Media queries for responsiveness */
+@media (min-width: 640px) {
+  .container {
+    padding: 2.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .description {
+    font-size: 0.85rem;
+    max-width: 400px;
+  }
+
+  .buttonGrid {
+    gap: 1.25rem;
+  }
+
+  .buttonBase {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 3rem;
+  }
+
+  .title {
+    font-size: 1.6rem;
+  }
+
+  .description {
+    font-size: 0.9rem;
+  }
+}

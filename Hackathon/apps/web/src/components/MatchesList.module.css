@@ -98,6 +98,35 @@
   font-weight: 500;
 }
 
+/* Media queries for responsiveness */
+@media (min-width: 640px) {
+  .matchesWrapper {
+    padding: 2rem;
+  }
+
+  .matchCard {
+    padding: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.4rem;
+  }
+
+  .athleteName {
+    font-size: 1.1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .matchesWrapper {
+    padding: 2.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
+
 /* Premium Framed Bio Block Quote */
 .bioBlock {
   color: #cbd5e1;
