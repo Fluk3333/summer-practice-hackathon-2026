@@ -1,9 +1,27 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Op } from 'sequelize';
+import { Server } from 'socket.io';
+import http from 'http';
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('⚡ A user connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('🔥 User disconnected');
+  });
+});
+
 const PORT = 3000;
 
 app.use(express.json());
@@ -17,6 +35,11 @@ const sequelize = new Sequelize(process.env.DATABASE_URL as string, {
 
 
 const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -24,7 +47,16 @@ const User = sequelize.define('User', {
   },
   name: {
     type: DataTypes.STRING,
+    allowNull: false,
   },
+  location: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  sports: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  }
 });
 
 
@@ -37,13 +69,56 @@ app.get('/api/ping', (req, res) => {
   res.json({ message: "Pong! The Brain is alive.", timestamp: new Date() });
 });
 
-app.post('/api/users', async (req, res) => {
+app.post('/api/users/sync', async (req, res) => {
   try {
     const { email, name } = req.body;
-    const newUser = await User.create({ email, name });
-    res.json(newUser);
+    
+    const [user, created] = await User.findOrCreate({
+      where: { email },
+      defaults: { name, email }
+    });
+    
+    if (created) {
+      io.emit('user_created', user);
+    }
+    
+    res.json(user);
   } catch (error) {
-    res.status(400).json({ error: "Failed to create user." });
+    res.status(400).json({ error: "Failed to sync user session." });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { location, sports } = req.body;
+    
+    await User.update({ location, sports }, { where: { id } });
+    
+    const updatedUser = await User.findByPk(id);
+    
+    io.emit('user_updated', updatedUser);
+    
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(400).json({ error: "Failed to update profile details." });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deletedCount = await User.destroy({ where: { id } });
+    
+    if (deletedCount > 0) {
+      io.emit('user_deleted', { id: parseInt(id) });
+      res.json({ success: true, message: "User deleted" });
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 
@@ -52,6 +127,6 @@ app.get('/api/users', async (req, res) => {
   res.json(users);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server + Realtime running on http://localhost:${PORT}`);
 });
