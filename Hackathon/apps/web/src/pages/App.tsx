@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { useAuth0 } from "@auth0/auth0-react";
 
-// Modular Components
-import { ToastContainer } from '../components/Toast';
-import { ProfileHeader } from '../components/ProfileHeader';
-import { ProfileForm } from '../components/ProfileForm';
-import { UserList } from '../components/UserList';
-import { LockedView } from '../components/LockedView';
+import { ToastContainer } from "../components/Toast";
+import { ProfileHeader } from "../components/ProfileHeader";
+import { ProfileForm } from "../components/ProfileForm";
+import { MatchesList } from "../components/MatchesList";
+import { UserList } from "../components/UserList";
+import { LockedView } from "../components/LockedView";
+import { ChatRoom } from "../components/Chatroom";
 
-// Type Imports
-import type { ToastType } from '../components/Toast';
+import type { ToastType } from "../components/Toast";
 
 interface User {
   id: number;
@@ -20,22 +20,21 @@ interface User {
   sports?: string | null;
 }
 
-const socket = io('http://localhost:3000');
+const socket = io("http://localhost:3000");
 
 function App() {
   const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
-  
-  // Database States
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [matches, setMatches] = useState<User[]>([]);
   const [toasts, setToasts] = useState<ToastType[]>([]);
 
-  // Profile Form States
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState("");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [activeRoom, setActiveRoom] = useState<string | null>(null); // 👈 2. Added activeRoom state
 
-  // Toast Helpers
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = (message: string, type: "success" | "error") => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => removeToast(id), 4000);
@@ -45,101 +44,128 @@ function App() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // 1. Fetch directories
   const fetchUsers = () => {
-    fetch('http://localhost:3000/api/users')
+    fetch("http://localhost:3000/api/users")
       .then((res) => res.json())
       .then((data) => setUsers(data))
-      .catch(() => showToast('Failed to fetch user directory.', 'error'));
+      .catch(() => showToast("Failed to fetch user directory.", "error"));
   };
 
-  // 2. Sync logged-in Auth0 user to our database
+  const fetchMatches = (userId: number) => {
+    fetch(`http://localhost:3000/api/matches/${userId}`)
+      .then((res) => res.json())
+      .then((data) => setMatches(data))
+      .catch(() =>
+        showToast("Failed to calculate matchmaking combinations.", "error"),
+      );
+  };
+
+  // 3. Added handleOpenChat callback function
+  const handleOpenChat = (loc: string, sport: string) => {
+    const formattedRoom = `${loc.replace(/\s+/g, "")}-${sport}`;
+    setActiveRoom(formattedRoom);
+  };
+
   useEffect(() => {
     if (isAuthenticated && auth0User) {
-      fetch('http://localhost:3000/api/users/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("http://localhost:3000/api/users/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: auth0User.name, email: auth0User.email }),
       })
         .then((res) => res.json())
         .then((dbUser: User) => {
           setCurrentUser(dbUser);
-          setLocation(dbUser.location || '');
-          setSelectedSports(dbUser.sports ? dbUser.sports.split(',').filter(Boolean) : []);
+          setLocation(dbUser.location || "");
+          setSelectedSports(
+            dbUser.sports ? dbUser.sports.split(",").filter(Boolean) : [],
+          );
           fetchUsers();
+          fetchMatches(dbUser.id);
         })
-        .catch(() => showToast('Error syncing profile with local cloud DB.', 'error'));
+        .catch(() =>
+          showToast("Error syncing profile with local cloud DB.", "error"),
+        );
     } else {
       setCurrentUser(null);
+      setMatches([]);
     }
   }, [isAuthenticated, auth0User]);
 
-  // 3. Real-time Sockets listening logic
   useEffect(() => {
-    socket.on('user_created', (newUser: User) => {
-      showToast(`New athlete registered: ${newUser.name}! 🚀`, 'success');
+    socket.on("user_created", (newUser: User) => {
+      showToast(`New athlete registered: ${newUser.name}! 🚀`, "success");
       fetchUsers();
     });
 
-    socket.on('user_deleted', (data: { id: number }) => {
-      showToast(`A user was removed from the database. 🗑️`, 'error');
+    socket.on("user_deleted", (data: { id: number }) => {
+      showToast(`A user was removed from the database. 🗑️`, "error");
       setUsers((prev) => prev.filter((u) => u.id !== data.id));
+      setMatches((prev) => prev.filter((m) => m.id !== data.id));
       if (currentUser?.id === data.id) {
         setCurrentUser(null);
       }
     });
 
-    socket.on('user_updated', (updatedUser: User) => {
-      showToast(`${updatedUser.name} updated their matchmaking profile! ⚡`, 'success');
+    socket.on("user_updated", (updatedUser: User) => {
+      showToast(
+        `${updatedUser.name} updated their matchmaking profile! ⚡`,
+        "success",
+      );
       fetchUsers();
-      // Update local state if the edited user was actually us!
+      if (currentUser) {
+        fetchMatches(currentUser.id);
+      }
       if (currentUser?.id === updatedUser.id) {
         setCurrentUser(updatedUser);
       }
     });
 
     return () => {
-      socket.off('user_created');
-      socket.off('user_deleted');
-      socket.off('user_updated');
+      socket.off("user_created");
+      socket.off("user_deleted");
+      socket.off("user_updated");
     };
   }, [currentUser]);
 
-  // Handle Sport Button Click toggles
   const handleToggleSport = (sport: string) => {
     setSelectedSports((prev) =>
-      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]
+      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport],
     );
   };
 
-  // Submit Profile Form Updates to AWS
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/users/${currentUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location,
-          sports: selectedSports.join(','), // Save array of sports as comma-separated text
-        }),
-      });
+      const response = await fetch(
+        `http://localhost:3000/api/users/${currentUser.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location,
+            sports: selectedSports.join(","),
+          }),
+        },
+      );
       const data = await response.json();
       setCurrentUser(data);
+      showToast("Profile updated successfully!", "success");
+      fetchMatches(currentUser.id);
     } catch (err) {
-      showToast('Error syncing preferences to AWS Vault.', 'error');
+      showToast("Error syncing preferences to AWS Vault.", "error");
     }
   };
 
   const handleDeleteUser = async (id: number) => {
     try {
       await fetch(`http://localhost:3000/api/users/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
     } catch (err) {
-      showToast('Error executing database deletion.', 'error');
+      showToast("Error executing database deletion.", "error");
     }
   };
 
@@ -147,7 +173,9 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center">
         <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-lg font-medium text-gray-300 animate-pulse">Verifying Security Session...</p>
+        <p className="text-lg font-medium text-gray-300 animate-pulse">
+          Verifying Security Session...
+        </p>
       </div>
     );
   }
@@ -161,21 +189,42 @@ function App() {
 
         {isAuthenticated ? (
           <>
-            <h1 className="text-3xl font-bold mb-8 text-blue-400 text-center">ShowUp2Move</h1>
-            
-            <ProfileForm
-              location={location}
-              setLocation={setLocation}
-              selectedSports={selectedSports}
-              toggleSport={handleToggleSport}
-              onSubmit={handleProfileSubmit}
-            />
+            <h1 className="text-3xl font-bold mb-8 text-blue-400 text-center">
+              ShowUp2Move
+            </h1>
 
-            <UserList 
-              users={users} 
-              currentUserId={currentUser?.id}
-              onDelete={handleDeleteUser} 
-            />
+            {/* Conditionally swap layout to ChatRoom if activeRoom is open */}
+            {activeRoom && currentUser ? (
+              <ChatRoom
+                roomName={activeRoom}
+                currentUser={currentUser}
+                onClose={() => setActiveRoom(null)}
+              />
+            ) : (
+              <>
+                <ProfileForm
+                  location={location}
+                  setLocation={setLocation}
+                  selectedSports={selectedSports}
+                  toggleSport={handleToggleSport}
+                  onSubmit={handleProfileSubmit}
+                />
+
+                {currentUser && (
+                  <MatchesList
+                    matches={matches}
+                    currentSports={selectedSports}
+                    onOpenChat={handleOpenChat}
+                  />
+                )}
+
+                <UserList
+                  users={users}
+                  currentUserId={currentUser?.id}
+                  onDelete={handleDeleteUser}
+                />
+              </>
+            )}
           </>
         ) : (
           <LockedView />
