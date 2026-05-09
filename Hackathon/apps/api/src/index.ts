@@ -24,10 +24,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL as string, {
   logging: false,
 });
 
-// ==========================================
-// MODELS
-// ==========================================
-
+// Database client setup complete
 const User = sequelize.define('User', {
   id: {
     type: DataTypes.INTEGER,
@@ -47,7 +44,7 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  skillLevel: { // 👈 Added skillLevel to User Model (Safe-alter setup)
+  skillLevel: {
     type: DataTypes.STRING,
     defaultValue: 'Intermediate',
     allowNull: true,
@@ -120,14 +117,10 @@ const Event = sequelize.define('Event', {
   }
 });
 
-// Sync both the model definition and any changes directly with AWS RDS
 sequelize.sync({ alter: true })
   .then(() => console.log('✅ Database & Tables synced to AWS'))
   .catch(err => console.error('❌ Database connection failed:', err));
 
-// ==========================================
-// REAL-WORLD TIMISOARA VENUES & PRICING DB
-// ==========================================
 const SUGGESTED_VENUES: Record<string, { venue: string; price: string }> = {
   Tennis: { venue: "Baza 2 UPT (Strada recoltei, Timisoara)", price: "40 RON / hour" },
   Basketball: { venue: "Sala Olimpia (Timisoara Indoor Court)", price: "Split Court Fee (approx 20 RON)" },
@@ -137,9 +130,6 @@ const SUGGESTED_VENUES: Record<string, { venue: string; price: string }> = {
   Badminton: { venue: "Sala de Sport Banu Sport Timisoara", price: "25 RON / hour" }
 };
 
-// ==========================================
-// SOCKETS
-// ==========================================
 io.on('connection', (socket) => {
   console.log('⚡ A user connected:', socket.id);
 
@@ -169,10 +159,6 @@ io.on('connection', (socket) => {
     console.log('🔥 User disconnected');
   });
 });
-
-// ==========================================
-// REST ROUTES
-// ==========================================
 
 app.get('/api/ping', (req, res) => {
   res.json({ message: "Pong!", timestamp: new Date() });
@@ -209,10 +195,8 @@ app.post('/api/events', async (req, res) => {
   try {
     const { room, venue, time, price, captainName } = req.body;
 
-    // Remove old event if it exists to clean up
     await Event.destroy({ where: { room } });
 
-    // Create a new event with the captain pre-RSVP'd
     const event = await Event.create({
       room,
       venue,
@@ -225,6 +209,22 @@ app.post('/api/events', async (req, res) => {
     res.json(event);
   } catch (error) {
     res.status(400).json({ error: "Failed to save coordinated event." });
+  }
+});
+
+// 👈 NEW: Cancel/Delete Event (Captain Privilege)
+app.delete('/api/events/:roomName', async (req, res) => {
+  try {
+    const { roomName } = req.params;
+    
+    await Event.destroy({ where: { room: roomName } });
+    
+    // 📢 Tell everyone in the room to hide the event panel!
+    io.to(roomName).emit('event_cancelled');
+    
+    res.json({ success: true, message: "Match plan cancelled" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to cancel planned match." });
   }
 });
 
@@ -274,7 +274,7 @@ app.post('/api/users/sync', async (req, res) => {
   }
 });
 
-// Profile update including descriptions and skill levels
+// Profile update
 app.put('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -291,7 +291,7 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
-// Upgraded Matchmaking: Calculates direct Skill Compatibility + Triggers Auto-Events
+// Upgraded Matchmaking
 app.get('/api/matches/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -310,7 +310,6 @@ app.get('/api/matches/:userId', async (req, res) => {
       }
     }) as any[];
 
-    // Calculate matches with compatibility scores (Skill Matching & Team Balancing)
     const matchedAthletes = locals
       .filter((local) => {
         if (!local.sports) return false;
@@ -318,21 +317,19 @@ app.get('/api/matches/:userId', async (req, res) => {
         return currentUserSports.some((sport: string) => localSports.includes(sport));
       })
       .map((local) => {
-        // Fallback checks to prevent null value crashes
         const userSkill = (currentUser.skillLevel || 'Intermediate').trim();
         const localSkill = (local.skillLevel || 'Intermediate').trim();
 
-        let skillBonus = 20; // 1-step gap default (e.g. Intermediate to Beginner/Advanced)
+        let skillBonus = 20;
         if (userSkill === localSkill) {
-          skillBonus = 30; // Exact match = Full Bonus
+          skillBonus = 30;
         } else if (
           (userSkill === 'Beginner' && localSkill === 'Advanced') ||
           (userSkill === 'Advanced' && localSkill === 'Beginner')
         ) {
-          skillBonus = 10; // Polar opposite gap = Base Bonus
+          skillBonus = 10;
         }
 
-        // Base 70% (Shared location + sport) + skill bonus (30%) = Max 100%
         const compatibilityScore = 70 + skillBonus;
 
         return {
@@ -348,7 +345,7 @@ app.get('/api/matches/:userId', async (req, res) => {
       });
 
     // ==========================================
-    // AUTO-EVENT GENERATOR (Group-Size Aware)
+    // AUTO-EVENT GENERATOR
     // ==========================================
     for (const sport of currentUserSports) {
       const sportSpecificMatches = matchedAthletes.filter(athlete => 

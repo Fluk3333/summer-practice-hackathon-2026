@@ -1,0 +1,108 @@
+/* Deep spatial atmosphere with infinite radial background depth */
+.appWrapper {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #09090b 60%, #020205 100%);
+  background-attachment: fixed;
+  color: #f8fafc;
+  padding: 3rem 1rem;
+  font-family: 'Inter', -apple-system, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle grid line overlay simulating a high-tech track court */
+.appWrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 28rem; /* 448px */
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Hyper-styled athletic neon title */
+.title {
+  font-size: 2.5rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  margin-bottom: 2.5rem;
+  filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.25));
+}
+
+/* Translucent warning/resting banner */
+.placeholderCard {
+  background: rgba(30, 41, 59, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.placeholderText {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.placeholderText strong {
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+/* Futuristic loading screen */
+.loadingScreen {
+  min-height: 100vh;
+  background: #020205;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.spinner {
+  height: 2.5rem;
+  width: 2.5rem;
+  border: 3px solid rgba(99, 102, 241, 0.1);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #818cf8;
+  text-transform: uppercase;
+  animation: pulse 1.8s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
+}

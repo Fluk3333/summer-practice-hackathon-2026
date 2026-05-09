@@ -1,3 +1,5 @@
+import styles from './UserList.module.css';
+
 interface User {
   id: number;
   email: string;
@@ -14,48 +16,53 @@ interface UserListProps {
 
 export function UserList({ users, currentUserId, onDelete }: UserListProps) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold border-b border-gray-700 pb-2 text-gray-300">Community Directory</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Community Directory</h2>
+      
       {users.length === 0 ? (
-        <p className="text-gray-500 text-center py-6 text-sm italic">No athletes registered yet.</p>
+        <p className={styles.emptyText}>No athletes registered yet.</p>
       ) : (
         users.map((u) => {
-          // Parse comma-separated sports string into an array
+          // Parse comma-separated sports string into an array cleanly
           const sportsList = u.sports ? u.sports.split(',').filter(Boolean) : [];
           const isMe = u.id === currentUserId;
 
           return (
-            <div key={u.id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition-colors">
-              <div className="flex justify-between items-start">
+            <div 
+              key={u.id} 
+              className={`${styles.card} ${isMe ? styles.cardMe : ''}`}
+            >
+              <div className={styles.cardHeader}>
                 <div>
-                  <h3 className="font-bold text-gray-200">
-                    {u.name} {isMe && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded ml-1">You</span>}
+                  <h3 className={styles.nameText}>
+                    {u.name} 
+                    {isMe && <span className={styles.meBadge}>You</span>}
                   </h3>
-                  <p className="text-gray-400 text-xs mb-2">{u.email}</p>
+                  <p className={styles.emailText}>{u.email}</p>
                   
-                  {/* Render Location if present */}
+                  {/* Render Location conditions */}
                   {u.location ? (
-                    <p className="text-gray-300 text-xs flex items-center gap-1 mb-2">
-                      📍 <span>{u.location}</span>
+                    <p className={styles.location}>
+                      <span>📍</span> <span>{u.location}</span>
                     </p>
                   ) : (
-                    <p className="text-gray-500 text-xs italic mb-2">No location added</p>
+                    <p className={styles.noLocation}>No location added</p>
                   )}
                 </div>
 
                 <button
                   onClick={() => onDelete(u.id)}
-                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10 px-2.5 py-1.5 rounded-lg transition-all font-semibold text-xs"
+                  className={styles.removeButton}
                 >
                   Remove
                 </button>
               </div>
 
-              {/* Render Sport Tags */}
+
               {sportsList.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-700/50">
+                <div className={styles.sportsDivider}>
                   {sportsList.map((sport) => (
-                    <span key={sport} className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <span key={sport} className={styles.sportTag}>
                       {sport}
                     </span>
                   ))}

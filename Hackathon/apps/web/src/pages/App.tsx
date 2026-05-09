@@ -12,13 +12,14 @@ import { ChatRoom } from "../components/Chatroom";
 import { ShowUpToday } from "../components/ShowUpToday";
 
 import type { ToastType } from "../components/Toast";
+import styles from "./App.module.css";
 
 interface User {
   id: number;
   email: string;
   name: string;
   description?: string | null;
-  skillLevel?: string; // 👈 Added tracking field
+  skillLevel?: string;
   location?: string | null;
   sports?: string | null;
   showUpToday?: boolean;
@@ -34,10 +35,9 @@ function App() {
   const [matches, setMatches] = useState<User[]>([]);
   const [toasts, setToasts] = useState<ToastType[]>([]);
 
-  // Form States
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
-  const [skillLevel, setSkillLevel] = useState("Intermediate"); // 👈 Added skill level state
+  const [skillLevel, setSkillLevel] = useState("Intermediate");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [showUpTodayStatus, setShowUpTodayStatus] = useState(false);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -85,7 +85,7 @@ function App() {
           setCurrentUser(dbUser);
           setLocation(dbUser.location || "");
           setDescription(dbUser.description || "");
-          setSkillLevel(dbUser.skillLevel || "Intermediate"); // 👈 Load skill level
+          setSkillLevel(dbUser.skillLevel || "Intermediate");
           setSelectedSports(
             dbUser.sports ? dbUser.sports.split(",").filter(Boolean) : [],
           );
@@ -158,7 +158,7 @@ function App() {
           body: JSON.stringify({
             location,
             description,
-            skillLevel, // 👈 Submit skill level
+            skillLevel,
             sports: selectedSports.join(","),
             showUpToday: showUpTodayStatus,
           }),
@@ -217,27 +217,23 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center">
-        <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-lg font-medium text-gray-300 animate-pulse">
-          Verifying Security Session...
-        </p>
+      <div className={styles.loadingScreen}>
+        <div className={styles.spinner}></div>
+        <p className={styles.loadingText}>Verifying Security Session...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 font-sans relative overflow-x-hidden">
+    <div className={styles.appWrapper}>
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      <div className="max-w-md mx-auto">
+      <div className={styles.container}>
         <ProfileHeader />
 
         {isAuthenticated ? (
           <>
-            <h1 className="text-3xl font-bold mb-8 text-blue-400 text-center">
-              ShowUp2Move
-            </h1>
+            <h1 className={styles.title}>ShowUp2Move</h1>
 
             {activeRoom && currentUser ? (
               <ChatRoom
@@ -273,9 +269,10 @@ function App() {
                   />
                 ) : (
                   currentUser && (
-                    <div className="bg-gray-800/40 border border-gray-700 p-6 rounded-xl mb-8 text-center">
-                      <p className="text-gray-400 text-sm italic">
-                        Check-in as <strong>"ShowUpToday!"</strong> to reveal compatible sports groups in your area.
+                    <div className={styles.placeholderCard}>
+                      <p className={styles.placeholderText}>
+                        Check-in as <strong>"ShowUpToday!"</strong> to reveal
+                        compatible sports groups in your area.
                       </p>
                     </div>
                   )

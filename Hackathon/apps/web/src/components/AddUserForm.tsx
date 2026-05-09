@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from './AddUserForm.module.css';
 
 interface AddUserFormProps {
   name: string;
@@ -10,19 +11,19 @@ interface AddUserFormProps {
 
 export function AddUserForm({ name, setName, email, setEmail, onSubmit }: AddUserFormProps) {
   return (
-    <form onSubmit={onSubmit} className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg">
-      <div className="mb-4">
+    <form onSubmit={onSubmit} className={styles.formContainer}>
+      <div className={styles.inputGroup}>
         <input
-          className="w-full bg-gray-900 border border-gray-700 p-2.5 rounded text-white focus:outline-none focus:border-blue-500 transition-colors"
+          className={styles.inputField}
           placeholder="Full Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
       </div>
-      <div className="mb-4">
+      <div className={styles.inputGroup}>
         <input
-          className="w-full bg-gray-900 border border-gray-700 p-2.5 rounded text-white focus:outline-none focus:border-blue-500 transition-colors"
+          className={styles.inputField}
           placeholder="Email Address"
           type="email"
           value={email}
@@ -30,7 +31,7 @@ export function AddUserForm({ name, setName, email, setEmail, onSubmit }: AddUse
           required
         />
       </div>
-      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded font-bold transition-all shadow-md shadow-blue-900/20">
+      <button type="submit" className={styles.submitButton}>
         Add to AWS Vault
       </button>
     </form>

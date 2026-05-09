@@ -1,0 +1,77 @@
+/* Crimson security chamber panel */
+.lockedContainer {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: radial-gradient(circle at center, rgba(30, 10, 15, 0.8) 0%, rgba(10, 5, 5, 0.95) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-top: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px rgba(239, 68, 68, 0.04), inset 0 1px 0 rgba(239, 68, 68, 0.1);
+}
+
+/* Pulsing neon red biometric secure glow */
+.lockIcon {
+  font-size: 3.75rem;
+  display: inline-block;
+  user-select: none;
+  animation: secure-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes secure-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.3));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 25px rgba(239, 68, 68, 0.7));
+  }
+}
+
+.title {
+  font-size: 1.35rem;
+  font-weight: 950;
+  margin-top: 1.5rem;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.description {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 0.65rem;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+/* Clean Authorization entry button */
+.loginButton {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  padding: 0.75rem 2.25rem;
+  border-radius: 0.75rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.loginButton:hover {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.55);
+  transform: translateY(-1.5px);
+}
+
+.loginButton:active {
+  transform: translateY(0.5px);
+}

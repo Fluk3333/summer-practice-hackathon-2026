@@ -1,0 +1,33 @@
+/* Container with an inset shadow for depth */
+.mapWrapper {
+  width: 100%;
+  height: 180px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(55, 65, 81, 0.6);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-top: 0.75rem;
+  background-color: #020205; /* 💡 Prevents white flash before iframe loads */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.mapWrapper:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 15px rgba(59, 130, 246, 0.15);
+}
+
+/* Styled map iframe */
+.mapIframe {
+  border: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+  
+  /* 💡 High-end Hackathon trick: Apply dark-mode inverter styles to standard Google Maps! */
+  filter: invert(90%) hue-rotate(180deg) contrast(120%);
+}
+
+.mapWrapper:hover .mapIframe {
+  opacity: 1;
+}
