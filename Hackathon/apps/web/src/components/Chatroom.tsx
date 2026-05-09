@@ -198,6 +198,7 @@ export function ChatRoom({ roomName, currentUser, matchedUsers, onClose }: ChatR
                 📍 Spontaneous Meetup Plan
               </span>
               <p className={styles.venueText}>🏟️ Venue: {activeEvent.venue}</p>
+              <MapEmbed venueName={activeEvent.venue} />
               <div className={styles.detailsRow}>
                 <span>🕒 Time: {activeEvent.time}</span>
                 <span>💵 Fee: {activeEvent.price}</span>

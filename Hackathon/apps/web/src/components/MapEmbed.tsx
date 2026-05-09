@@ -16,6 +16,10 @@ export function MapEmbed({ venueName }: MapEmbedProps) {
         className={styles.mapIframe}
         loading="lazy"
         src={mapUrl}
+        frameBorder="0"
+        allowFullScreen={true}
+        referrerPolicy="no-referrer-when-downgrade"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
       />
     </div>
   );
