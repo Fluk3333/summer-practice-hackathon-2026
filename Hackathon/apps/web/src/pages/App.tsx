@@ -9,6 +9,7 @@ import { MatchesList } from "../components/MatchesList";
 import { UserList } from "../components/UserList";
 import { LockedView } from "../components/LockedView";
 import { ChatRoom } from "../components/Chatroom";
+import { ShowUpToday } from "../components/ShowUpToday";
 
 import type { ToastType } from "../components/Toast";
 
@@ -16,8 +17,10 @@ interface User {
   id: number;
   email: string;
   name: string;
+  description?: string | null; // 👈 Tracking description
   location?: string | null;
   sports?: string | null;
+  showUpToday?: boolean;
 }
 
 const socket = io("http://localhost:3000");
@@ -30,9 +33,12 @@ function App() {
   const [matches, setMatches] = useState<User[]>([]);
   const [toasts, setToasts] = useState<ToastType[]>([]);
 
+  // Form States
   const [location, setLocation] = useState("");
+  const [description, setDescription] = useState(""); // 👈 Bio state added
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
-  const [activeRoom, setActiveRoom] = useState<string | null>(null); // 👈 2. Added activeRoom state
+  const [showUpTodayStatus, setShowUpTodayStatus] = useState(false);
+  const [activeRoom, setActiveRoom] = useState<string | null>(null);
 
   const showToast = (message: string, type: "success" | "error") => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -60,7 +66,6 @@ function App() {
       );
   };
 
-  // 3. Added handleOpenChat callback function
   const handleOpenChat = (loc: string, sport: string) => {
     const formattedRoom = `${loc.replace(/\s+/g, "")}-${sport}`;
     setActiveRoom(formattedRoom);
@@ -77,9 +82,11 @@ function App() {
         .then((dbUser: User) => {
           setCurrentUser(dbUser);
           setLocation(dbUser.location || "");
+          setDescription(dbUser.description || ""); // 👈 Load description
           setSelectedSports(
             dbUser.sports ? dbUser.sports.split(",").filter(Boolean) : [],
           );
+          setShowUpTodayStatus(!!dbUser.showUpToday);
           fetchUsers();
           fetchMatches(dbUser.id);
         })
@@ -118,6 +125,7 @@ function App() {
       }
       if (currentUser?.id === updatedUser.id) {
         setCurrentUser(updatedUser);
+        setShowUpTodayStatus(!!updatedUser.showUpToday);
       }
     });
 
@@ -146,7 +154,9 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             location,
+            description, // 👈 Sync description up to AWS MySQL
             sports: selectedSports.join(","),
+            showUpToday: showUpTodayStatus,
           }),
         },
       );
@@ -156,6 +166,37 @@ function App() {
       fetchMatches(currentUser.id);
     } catch (err) {
       showToast("Error syncing preferences to AWS Vault.", "error");
+    }
+  };
+
+  const handleToggleShowUpToday = async (nextStatus: boolean) => {
+    if (!currentUser) return;
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/users/${currentUser.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location,
+            description,
+            sports: selectedSports.join(","),
+            showUpToday: nextStatus,
+          }),
+        },
+      );
+      const data = await response.json();
+      setCurrentUser(data);
+      setShowUpTodayStatus(nextStatus);
+      showToast(
+        nextStatus
+          ? "You are checked in! Ready to match. 🏃‍♂️"
+          : "Status marked as resting. 🛌",
+        "success",
+      );
+      fetchMatches(currentUser.id);
+    } catch (err) {
+      showToast("Failed to execute spontaneous check-in.", "error");
     }
   };
 
@@ -193,11 +234,12 @@ function App() {
               ShowUp2Move
             </h1>
 
-            {/* Conditionally swap layout to ChatRoom if activeRoom is open */}
             {activeRoom && currentUser ? (
               <ChatRoom
                 roomName={activeRoom}
-                currentUser={currentUser}
+                // Cast as concrete structures for Captain calculations
+                currentUser={{ id: currentUser.id, name: currentUser.name }}
+                matchedUsers={matches.map((m) => ({ id: m.id, name: m.name }))}
                 onClose={() => setActiveRoom(null)}
               />
             ) : (
@@ -205,17 +247,32 @@ function App() {
                 <ProfileForm
                   location={location}
                   setLocation={setLocation}
+                  description={description}
+                  setDescription={setDescription}
                   selectedSports={selectedSports}
                   toggleSport={handleToggleSport}
                   onSubmit={handleProfileSubmit}
                 />
 
-                {currentUser && (
+                <ShowUpToday
+                  status={showUpTodayStatus}
+                  onToggle={handleToggleShowUpToday}
+                />
+
+                {currentUser && showUpTodayStatus ? (
                   <MatchesList
                     matches={matches}
                     currentSports={selectedSports}
                     onOpenChat={handleOpenChat}
                   />
+                ) : (
+                  currentUser && (
+                    <div className="bg-gray-800/40 border border-gray-700 p-6 rounded-xl mb-8 text-center">
+                      <p className="text-gray-400 text-sm italic">
+                        Check-in as <strong>"ShowUpToday!"</strong> to reveal compatible sports groups in your area.
+                      </p>
+                    </div>
+                  )
                 )}
 
                 <UserList

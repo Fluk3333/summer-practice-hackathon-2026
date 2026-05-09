@@ -3,6 +3,8 @@ import React from 'react';
 interface ProfileFormProps {
   location: string;
   setLocation: (loc: string) => void;
+  description: string;                 // 👈 Added description prop
+  setDescription: (desc: string) => void; // 👈 Added setter prop
   selectedSports: string[];
   toggleSport: (sport: string) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -10,17 +12,29 @@ interface ProfileFormProps {
 
 const AVAILABLE_SPORTS = ['Basketball', 'Tennis', 'Soccer', 'Running', 'Volleyball', 'Badminton'];
 
-export function ProfileForm({ location, setLocation, selectedSports, toggleSport, onSubmit }: ProfileFormProps) {
+export function ProfileForm({ location, setLocation, description, setDescription, selectedSports, toggleSport, onSubmit }: ProfileFormProps) {
   return (
     <form onSubmit={onSubmit} className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg">
       <h2 className="text-lg font-bold mb-4 text-blue-400">Complete Your Match Profile</h2>
       
+      {/* Description / Bio Input */}
+      <div className="mb-4">
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Short Description</label>
+        <input
+          className="w-full bg-gray-900 border border-gray-700 p-2.5 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
+          placeholder="e.g., Spontaneous soccer player. Looking to play weekends!"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+      </div>
+
       {/* Location Input */}
       <div className="mb-5">
         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">My Location</label>
         <input
           className="w-full bg-gray-900 border border-gray-700 p-2.5 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
-          placeholder="e.g., Austin, TX or New York, NY"
+          placeholder="e.g., Timisoara"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           required
