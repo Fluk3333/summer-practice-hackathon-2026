@@ -44,7 +44,12 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   description: {
-    type: DataTypes.STRING, // 👈 Added user bio / short description
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  skillLevel: { // 👈 Added skillLevel to User Model (Safe-alter setup)
+    type: DataTypes.STRING,
+    defaultValue: 'Intermediate',
     allowNull: true,
   },
   location: {
@@ -86,7 +91,6 @@ const Message = sequelize.define('Message', {
   }
 });
 
-// 👈 New Event Model to assist Captain coordination
 const Event = sequelize.define('Event', {
   id: {
     type: DataTypes.INTEGER,
@@ -96,7 +100,7 @@ const Event = sequelize.define('Event', {
   room: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true, // Only one active event per sport group
+    unique: true,
   },
   venue: {
     type: DataTypes.STRING,
@@ -111,14 +115,27 @@ const Event = sequelize.define('Event', {
     defaultValue: 'Free',
   },
   rsvps: {
-    type: DataTypes.TEXT, // Comma-separated list of RSVP'd users (e.g. "Andrei,Maria")
+    type: DataTypes.TEXT,
     defaultValue: '',
   }
 });
 
+// Sync both the model definition and any changes directly with AWS RDS
 sequelize.sync({ alter: true })
   .then(() => console.log('✅ Database & Tables synced to AWS'))
   .catch(err => console.error('❌ Database connection failed:', err));
+
+// ==========================================
+// REAL-WORLD TIMISOARA VENUES & PRICING DB
+// ==========================================
+const SUGGESTED_VENUES: Record<string, { venue: string; price: string }> = {
+  Tennis: { venue: "Baza 2 UPT (Strada recoltei, Timisoara)", price: "40 RON / hour" },
+  Basketball: { venue: "Sala Olimpia (Timisoara Indoor Court)", price: "Split Court Fee (approx 20 RON)" },
+  Soccer: { venue: "Teren Sintetic Decathlon Timisoara", price: "Free (Spontaneous Grassroots)" },
+  Running: { venue: "Parcul Copiilor track & Bega River Canal", price: "Free (Outdoor)" },
+  Volleyball: { venue: "Baza Sportiva UVT (Oituz, Timisoara)", price: "30 RON / hour" },
+  Badminton: { venue: "Sala de Sport Banu Sport Timisoara", price: "25 RON / hour" }
+};
 
 // ==========================================
 // SOCKETS
@@ -201,10 +218,9 @@ app.post('/api/events', async (req, res) => {
       venue,
       time,
       price,
-      rsvps: captainName, // Captain is automatically attending
+      rsvps: captainName,
     });
 
-    // 📢 Real-time announcement inside this room!
     io.to(room).emit('event_created', event);
     res.json(event);
   } catch (error) {
@@ -224,17 +240,14 @@ app.post('/api/events/:id/rsvp', async (req, res) => {
     let attendeeArray = event.rsvps ? event.rsvps.split(',').filter(Boolean) : [];
 
     if (attendeeArray.includes(userName)) {
-      // Toggle off: Remove RSVP
       attendeeArray = attendeeArray.filter((name: string) => name !== userName);
     } else {
-      // Toggle on: Add RSVP
       attendeeArray.push(userName);
     }
 
     event.rsvps = attendeeArray.join(',');
     await event.save();
 
-    // 📢 Sync attendance changes in real-time
     io.to(event.room).emit('rsvp_updated', event);
     res.json(event);
   } catch (error) {
@@ -248,7 +261,7 @@ app.post('/api/users/sync', async (req, res) => {
     
     const [user, created] = await User.findOrCreate({
       where: { email },
-      defaults: { name, email, showUpToday: false }
+      defaults: { name, email, showUpToday: false, skillLevel: 'Intermediate' }
     });
     
     if (created) {
@@ -261,13 +274,13 @@ app.post('/api/users/sync', async (req, res) => {
   }
 });
 
-// Profile update including descriptions
+// Profile update including descriptions and skill levels
 app.put('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { location, sports, showUpToday, description } = req.body;
+    const { location, sports, showUpToday, description, skillLevel } = req.body;
     
-    await User.update({ location, sports, showUpToday, description }, { where: { id } });
+    await User.update({ location, sports, showUpToday, description, skillLevel }, { where: { id } });
     
     const updatedUser = await User.findByPk(id);
     io.emit('user_updated', updatedUser);
@@ -278,6 +291,7 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
+// Upgraded Matchmaking: Calculates direct Skill Compatibility + Triggers Auto-Events
 app.get('/api/matches/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -296,11 +310,74 @@ app.get('/api/matches/:userId', async (req, res) => {
       }
     }) as any[];
 
-    const matchedAthletes = locals.filter((local) => {
-      if (!local.sports) return false;
-      const localSports = local.sports.split(',').filter(Boolean);
-      return currentUserSports.some((sport: string) => localSports.includes(sport));
-    });
+    // Calculate matches with compatibility scores (Skill Matching & Team Balancing)
+    const matchedAthletes = locals
+      .filter((local) => {
+        if (!local.sports) return false;
+        const localSports = local.sports.split(',').filter(Boolean);
+        return currentUserSports.some((sport: string) => localSports.includes(sport));
+      })
+      .map((local) => {
+        // Fallback checks to prevent null value crashes
+        const userSkill = (currentUser.skillLevel || 'Intermediate').trim();
+        const localSkill = (local.skillLevel || 'Intermediate').trim();
+
+        let skillBonus = 20; // 1-step gap default (e.g. Intermediate to Beginner/Advanced)
+        if (userSkill === localSkill) {
+          skillBonus = 30; // Exact match = Full Bonus
+        } else if (
+          (userSkill === 'Beginner' && localSkill === 'Advanced') ||
+          (userSkill === 'Advanced' && localSkill === 'Beginner')
+        ) {
+          skillBonus = 10; // Polar opposite gap = Base Bonus
+        }
+
+        // Base 70% (Shared location + sport) + skill bonus (30%) = Max 100%
+        const compatibilityScore = 70 + skillBonus;
+
+        return {
+          id: local.id,
+          name: local.name,
+          email: local.email,
+          description: local.description,
+          location: local.location,
+          sports: local.sports,
+          skillLevel: localSkill,
+          compatibility: compatibilityScore 
+        };
+      });
+
+    // ==========================================
+    // AUTO-EVENT GENERATOR (Group-Size Aware)
+    // ==========================================
+    for (const sport of currentUserSports) {
+      const sportSpecificMatches = matchedAthletes.filter(athlete => 
+        athlete.sports?.split(',').includes(sport)
+      );
+
+      const totalGroupSizeIncludingMe = sportSpecificMatches.length + 1;
+      const minRequiredGroup = (sport === 'Tennis' || sport === 'Badminton' || sport === 'Running') ? 2 : 3;
+
+      if (totalGroupSizeIncludingMe >= minRequiredGroup) {
+        const roomName = `${currentUser.location.replace(/\s+/g, '')}-${sport}`;
+        
+        const existingEvent = await Event.findOne({ where: { room: roomName } });
+        if (!existingEvent) {
+          const suggestion = SUGGESTED_VENUES[sport] || { venue: "Local Community Court", price: "Free" };
+          const deterministicCaptain = [currentUser, ...sportSpecificMatches].sort((a, b) => a.id - b.id)[0];
+
+          await Event.create({
+            room: roomName,
+            venue: `${suggestion.venue} (Auto-Generated Group Match)`,
+            time: "Spontaneous Game - Tonight at 19:30",
+            price: suggestion.price,
+            rsvps: deterministicCaptain.name,
+          });
+
+          console.log(`🤖 Auto-Event generated for room: ${roomName}`);
+        }
+      }
+    }
 
     res.json(matchedAthletes);
   } catch (error) {

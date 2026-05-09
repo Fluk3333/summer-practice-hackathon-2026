@@ -17,7 +17,8 @@ interface User {
   id: number;
   email: string;
   name: string;
-  description?: string | null; // 👈 Tracking description
+  description?: string | null;
+  skillLevel?: string; // 👈 Added tracking field
   location?: string | null;
   sports?: string | null;
   showUpToday?: boolean;
@@ -35,7 +36,8 @@ function App() {
 
   // Form States
   const [location, setLocation] = useState("");
-  const [description, setDescription] = useState(""); // 👈 Bio state added
+  const [description, setDescription] = useState("");
+  const [skillLevel, setSkillLevel] = useState("Intermediate"); // 👈 Added skill level state
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [showUpTodayStatus, setShowUpTodayStatus] = useState(false);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -82,7 +84,8 @@ function App() {
         .then((dbUser: User) => {
           setCurrentUser(dbUser);
           setLocation(dbUser.location || "");
-          setDescription(dbUser.description || ""); // 👈 Load description
+          setDescription(dbUser.description || "");
+          setSkillLevel(dbUser.skillLevel || "Intermediate"); // 👈 Load skill level
           setSelectedSports(
             dbUser.sports ? dbUser.sports.split(",").filter(Boolean) : [],
           );
@@ -154,7 +157,8 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             location,
-            description, // 👈 Sync description up to AWS MySQL
+            description,
+            skillLevel, // 👈 Submit skill level
             sports: selectedSports.join(","),
             showUpToday: showUpTodayStatus,
           }),
@@ -180,6 +184,7 @@ function App() {
           body: JSON.stringify({
             location,
             description,
+            skillLevel,
             sports: selectedSports.join(","),
             showUpToday: nextStatus,
           }),
@@ -237,7 +242,6 @@ function App() {
             {activeRoom && currentUser ? (
               <ChatRoom
                 roomName={activeRoom}
-                // Cast as concrete structures for Captain calculations
                 currentUser={{ id: currentUser.id, name: currentUser.name }}
                 matchedUsers={matches.map((m) => ({ id: m.id, name: m.name }))}
                 onClose={() => setActiveRoom(null)}
@@ -249,6 +253,8 @@ function App() {
                   setLocation={setLocation}
                   description={description}
                   setDescription={setDescription}
+                  skillLevel={skillLevel}
+                  setSkillLevel={setSkillLevel}
                   selectedSports={selectedSports}
                   toggleSport={handleToggleSport}
                   onSubmit={handleProfileSubmit}
